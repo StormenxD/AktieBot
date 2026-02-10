@@ -1,5 +1,5 @@
-numpy>=1.26.0
-pandas>=2.1.4
-yfinance>=0.2.32
-dash>=2.14.0
-plotly>=5.17.0
+numpy<2.0
+pandas
+yfinance
+dash
+plotly
