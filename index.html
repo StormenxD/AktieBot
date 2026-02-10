@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading Strategy Backtest</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0e0e0e;
+            color: #e0e0e0;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: #00ff7f;
+            margin-bottom: 10px;
+            font-size: 2.5rem;
+        }
+        
+        .subtitle {
+            color: #999;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+        }
+        
+        .config-box {
+            background: #1a1a1a;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 2px solid #ff4d4d;
+        }
+        
+        .config-title {
+            color: #00ff7f;
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        
+        .config-item {
+            margin-bottom: 8px;
+            line-height: 1.6;
+        }
+        
+        .config-item strong {
+            color: #00ff7f;
+        }
+        
+        .controls {
+            background: #1a1a1a;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #00ff7f;
+        }
+        
+        select {
+            width: 100%;
+            padding: 12px;
+            background: #2a2a2a;
+            color: #e0e0e0;
+            border: 2px solid #00ff7f;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        
+        select:focus {
+            outline: none;
+            border-color: #00ff7f;
+            box-shadow: 0 0 10px rgba(0, 255, 127, 0.3);
+        }
+        
+        button {
+            width: 100%;
+            padding: 15px;
+            background: #00ff7f;
+            color: #0e0e0e;
+            border: none;
+            border-radius: 5px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: #00d96f;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 255, 127, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .stats {
+            background: #1a1a1a;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        
+        .stat-box {
+            text-align: center;
+            padding: 15px;
+            background: #2a2a2a;
+            border-radius: 8px;
+        }
+        
+        .stat-label {
+            color: #999;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            color: #00ff7f;
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+        
+        .stat-value.negative {
+            color: #ff4d4d;
+        }
+        
+        .chart-container {
+            background: #1a1a1a;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #00ff7f;
+            font-size: 1.2rem;
+        }
+        
+        .error {
+            background: #ff4d4d;
+            color: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            .stats {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📈 Trading Strategy Backtest</h1>
+        <p class="subtitle">Mean Reversion Strategy with Multi-Level Risk Management</p>
+        
+        <div class="config-box">
+            <div class="config-title">⚙️ Strategy Configuration</div>
+            <div class="config-item"><strong>Entry Signal:</strong> Z-score < -1.7 (undervalued)</div>
+            <div class="config-item"><strong>Partial Exit:</strong> Z-score > 0.1 (50% position)</div>
+            <div class="config-item"><strong>Full Exit:</strong> Z-score > 0.9 (100% position)</div>
+            <div class="config-item"><strong>Stop Loss:</strong> -18% or Z-score < -10</div>
+            <div class="config-item"><strong>Position Size:</strong> Max 25% per position</div>
+            <div class="config-item"><strong>Starting Capital:</strong> 100,000 SEK</div>
+        </div>
+        
+        <div class="controls">
+            <label for="stock-select">Select Stocks to Backtest:</label>
+            <select id="stock-select" multiple size="10">
+                <optgroup label="Swedish Stocks">
+                    <option value="ABB.ST">ABB.ST</option>
+                    <option value="AZN.ST">AZN.ST</option>
+                    <option value="ERIC-B.ST">ERIC-B.ST</option>
+                    <option value="HM-B.ST">HM-B.ST</option>
+                    <option value="VOLV-B.ST">VOLV-B.ST</option>
+                </optgroup>
+                <optgroup label="NASDAQ Stocks">
+                    <option value="AAPL" selected>AAPL</option>
+                    <option value="MSFT">MSFT</option>
+                    <option value="GOOGL">GOOGL</option>
+                    <option value="AMZN">AMZN</option>
+                    <option value="NVDA">NVDA</option>
+                    <option value="META">META</option>
+                    <option value="TSLA">TSLA</option>
+                </optgroup>
+            </select>
+            <button id="run-backtest">Run Backtest</button>
+        </div>
+        
+        <div id="error-message" style="display: none;" class="error"></div>
+        <div id="loading" style="display: none;" class="loading">
+            🔄 Running backtest... This may take 30-60 seconds...
+        </div>
+        
+        <div id="stats" style="display: none;" class="stats"></div>
+        
+        <div id="equity-chart" class="chart-container" style="display: none;"></div>
+        <div id="trades-chart" class="chart-container" style="display: none;"></div>
+    </div>
+    
+    <script>
+        const runButton = document.getElementById('run-backtest');
+        const stockSelect = document.getElementById('stock-select');
+        const loading = document.getElementById('loading');
+        const errorMessage = document.getElementById('error-message');
+        const statsDiv = document.getElementById('stats');
+        const equityChart = document.getElementById('equity-chart');
+        const tradesChart = document.getElementById('trades-chart');
+        
+        runButton.addEventListener('click', async () => {
+            const selectedStocks = Array.from(stockSelect.selectedOptions).map(opt => opt.value);
+            
+            if (selectedStocks.length === 0) {
+                alert('Please select at least one stock');
+                return;
+            }
+            
+            // Show loading
+            loading.style.display = 'block';
+            errorMessage.style.display = 'none';
+            statsDiv.style.display = 'none';
+            equityChart.style.display = 'none';
+            tradesChart.style.display = 'none';
+            runButton.disabled = true;
+            
+            try {
+                const response = await fetch(`/api/backtest?stocks=${selectedStocks.join(',')}`);
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                // Display stats
+                displayStats(data);
+                
+                // Plot equity curve
+                plotEquityCurve(data);
+                
+                // Plot trades
+                plotTrades(data);
+                
+                // Hide loading
+                loading.style.display = 'none';
+                
+            } catch (error) {
+                errorMessage.textContent = `Error: ${error.message}`;
+                errorMessage.style.display = 'block';
+                loading.style.display = 'none';
+            } finally {
+                runButton.disabled = false;
+            }
+        });
+        
+        function displayStats(data) {
+            const totalReturn = data.total_return.toFixed(2);
+            const finalValue = data.final_value.toFixed(2);
+            const numTrades = data.trades.length;
+            const winningTrades = data.trades.filter(t => t.action === 'SELL' && t.profit > 0).length;
+            const winRate = numTrades > 0 ? ((winningTrades / numTrades) * 100).toFixed(1) : 0;
+            
+            statsDiv.innerHTML = `
+                <div class="stat-box">
+                    <div class="stat-label">Final Value</div>
+                    <div class="stat-value">${parseFloat(finalValue).toLocaleString()} SEK</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Total Return</div>
+                    <div class="stat-value ${totalReturn < 0 ? 'negative' : ''}">${totalReturn}%</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Total Trades</div>
+                    <div class="stat-value">${numTrades}</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Win Rate</div>
+                    <div class="stat-value">${winRate}%</div>
+                </div>
+            `;
+            statsDiv.style.display = 'grid';
+        }
+        
+        function plotEquityCurve(data) {
+            const traces = [];
+            
+            // Portfolio trace
+            traces.push({
+                x: data.portfolio.map(p => p.date),
+                y: data.portfolio.map(p => p.value),
+                type: 'scatter',
+                mode: 'lines',
+                name: 'Strategy',
+                line: { color: '#00ff7f', width: 3 }
+            });
+            
+            // Benchmarks
+            if (data.benchmarks.OMXS30) {
+                traces.push({
+                    x: data.benchmarks.OMXS30.map(p => p.date),
+                    y: data.benchmarks.OMXS30.map(p => p.value),
+                    type: 'scatter',
+                    mode: 'lines',
+                    name: 'OMXS30',
+                    line: { color: '#ff4d4d', width: 2, dash: 'dash' }
+                });
+            }
+            
+            if (data.benchmarks.NASDAQ) {
+                traces.push({
+                    x: data.benchmarks.NASDAQ.map(p => p.date),
+                    y: data.benchmarks.NASDAQ.map(p => p.value),
+                    type: 'scatter',
+                    mode: 'lines',
+                    name: 'NASDAQ',
+                    line: { color: '#00D9FF', width: 2, dash: 'dot' }
+                });
+            }
+            
+            const layout = {
+                title: 'Portfolio Value Over Time',
+                xaxis: { title: 'Date', color: '#e0e0e0' },
+                yaxis: { title: 'Value (SEK)', color: '#e0e0e0' },
+                plot_bgcolor: '#1a1a1a',
+                paper_bgcolor: '#1a1a1a',
+                font: { color: '#e0e0e0' },
+                hovermode: 'x unified'
+            };
+            
+            Plotly.newPlot('equity-chart', traces, layout, { responsive: true });
+            equityChart.style.display = 'block';
+        }
+        
+        function plotTrades(data) {
+            const sellTrades = data.trades.filter(t => t.action === 'SELL');
+            
+            if (sellTrades.length === 0) {
+                return;
+            }
+            
+            const trace = {
+                x: sellTrades.map(t => t.date),
+                y: sellTrades.map(t => t.profit_pct),
+                type: 'scatter',
+                mode: 'markers',
+                marker: {
+                    size: 10,
+                    color: sellTrades.map(t => t.profit_pct > 0 ? '#00ff7f' : '#ff4d4d'),
+                    line: { color: 'white', width: 1 }
+                },
+                text: sellTrades.map(t => `${t.stock}<br>${t.reason}<br>${t.profit_pct.toFixed(2)}%`),
+                hovertemplate: '%{text}<extra></extra>'
+            };
+            
+            const avgProfit = sellTrades.reduce((sum, t) => sum + t.profit_pct, 0) / sellTrades.length;
+            
+            const layout = {
+                title: 'Trade Performance',
+                xaxis: { title: 'Date', color: '#e0e0e0' },
+                yaxis: { title: 'Profit (%)', color: '#e0e0e0' },
+                plot_bgcolor: '#1a1a1a',
+                paper_bgcolor: '#1a1a1a',
+                font: { color: '#e0e0e0' },
+                shapes: [
+                    {
+                        type: 'line',
+                        x0: sellTrades[0].date,
+                        x1: sellTrades[sellTrades.length - 1].date,
+                        y0: 0,
+                        y1: 0,
+                        line: { color: 'gray', width: 2 }
+                    },
+                    {
+                        type: 'line',
+                        x0: sellTrades[0].date,
+                        x1: sellTrades[sellTrades.length - 1].date,
+                        y0: avgProfit,
+                        y1: avgProfit,
+                        line: { color: 'white', width: 2, dash: 'dash' }
+                    }
+                ],
+                annotations: [
+                    {
+                        x: sellTrades[Math.floor(sellTrades.length / 2)].date,
+                        y: avgProfit,
+                        text: `Average: ${avgProfit.toFixed(2)}%`,
+                        showarrow: false,
+                        yshift: 20,
+                        font: { color: 'white' }
+                    }
+                ]
+            };
+            
+            Plotly.newPlot('trades-chart', [trace], layout, { responsive: true });
+            tradesChart.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
