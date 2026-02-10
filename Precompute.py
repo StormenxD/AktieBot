@@ -168,7 +168,7 @@ print("Detta kan ta 1-2 minuter med 80 aktier + valutakurs...")
 # Download stock prices
 prices_raw = yf.download(
     list(stocks.keys()) + ["^OMX", "^IXIC"],
-    period="20y",
+    period="10y",
     interval="1d",
     auto_adjust=True,
     progress=False
@@ -179,7 +179,7 @@ print("Laddar ner USD/SEK växelkurs...")
 try:
     usdsek = yf.download(
         "USDSEK=X",
-        period="20y",
+        period="10y",
         interval="1d",
         auto_adjust=True,
         progress=False
@@ -245,7 +245,7 @@ volatility = returns.rolling(WINDOW).std()
 try:
     volumes = yf.download(
         list(stocks.keys()),
-        period="20y",
+        period="10y",
         interval="1d",
         auto_adjust=True,
         progress=False
@@ -796,5 +796,6 @@ data_to_save = {
 
 with open('backtest_data.pkl', 'wb') as f:
     pickle.dump(data_to_save, f)
+
 
 print("✓ Backtest data saved!")
