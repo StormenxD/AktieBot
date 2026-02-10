@@ -1169,4 +1169,5 @@ def update_graphs(selected_stocks):
 if __name__ == "__main__":
     print("\n🚀 Startar Dash app på http://127.0.0.1:8050")
     print("Tryck Ctrl+C för att avsluta\n")
+
     app.run(debug=True)
